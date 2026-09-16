@@ -53,57 +53,63 @@ class SpeechEngine {
   private currentSequenceId: number = 0;
   private timerAlertTriggeredForQuestion: number = -1;
 
-  // Pools de frases variadas estilo presentador de concurso juvenil
+  // Pools de frases variadas estilo presentador de concurso juvenil (breves, ágiles y nunca sobrecargadas)
   private introPool = new AntiRepeatPool([
-    '¡Arranca el Reto Relámpago! ¡A pensar rápido y a ganar!',
-    '¡Luces, cámara y acción! Concéntrate y demuestra de qué estás hecho.',
-    '¡Comienza el juego! Diez preguntas contra el reloj. ¡Vamos con toda!',
-    '¡Reloj en marcha! Piensa veloz y no dejes escapar ningún punto.',
-    '¡Bienvenidos al desafío! Velocidad mental activada, ¡a jugar!',
+    '¡Arranca el Reto Relámpago! ¡A pensar rápido!',
+    '¡Comienza el concurso! ¡Vamos con toda!',
+    '¡Reloj en marcha! Demuestra tu velocidad mental.',
+    '¡Arrancamos el reto! ¡A ganar puntos!',
+    '¡Bienvenidos al desafío! Concéntrate y a jugar.',
   ]);
 
   private correctPool = new AntiRepeatPool([
-    '¡Eso es! ¡Totalmente correcto!',
-    '¡De una! ¡La clavaste!',
-    '¡Brillante! ¡Puntos para ti!',
-    '¡Respuesta impecable! ¡Estás volando!',
-    '¡Precisión absoluta! ¡Excelente jugada!',
-    '¡Qué crack! ¡Puntaje en subida!',
-    '¡Justo en el blanco! ¡Muy bien pensado!',
+    '¡Correcto! ¡Puntos para ti!',
+    '¡Exacto! ¡Gran reflejo!',
+    '¡Muy bien jugado!',
+    '¡En el blanco! ¡Excelente!',
+    '¡Eso es! ¡Suma y sigue!',
+    '¡De una! ¡Respuesta acertada!',
+    '¡Brillante! ¡Acierto impecable!',
   ]);
 
   private streak3Pool = new AntiRepeatPool([
-    '¡Racha de tres aciertos! ¡Estás encendido!',
-    '¡Tres seguidas! ¡Qué ritmo llevas!',
-    '¡Triple acierto! ¡Ese cerebro está a mil por hora!',
+    '¡Racha de tres aciertos!',
+    '¡Tres al hilo!',
+    '¡Triple acierto, estás encendido!',
   ]);
 
   private streak5Pool = new AntiRepeatPool([
-    '¡Super racha de cinco! ¡Puro fuego mental!',
-    '¡Cinco al hilo! ¡Eres una máquina imparable!',
-    '¡Racha legendaria de cinco! ¡Qué nivelazo!',
+    '¡Super racha de cinco aciertos!',
+    '¡Cinco seguidas, imparable!',
+    '¡Racha de fuego, qué nivel!',
+  ]);
+
+  private levelUpPool = new AntiRepeatPool([
+    '¡Subes de nivel de racha! ¡Fuego relámpago!',
+    '¡Nuevo nivel de bonificación alcanzado!',
+    '¡Racha maestra! ¡Puntos multiplicados!',
   ]);
 
   private incorrectPool = new AntiRepeatPool([
-    '¡Tranqui, no pasa nada! La correcta era: {CORRECT}. ¡En la siguiente te repones!',
-    '¡Casi la tienes! La respuesta era: {CORRECT}. ¡Cabeza arriba y a sumar!',
-    '¡Buen intento! La opción era: {CORRECT}. ¡Sigue con toda que aún queda partida!',
-    '¡Patinamos por poco! Era: {CORRECT}. ¡Concéntrate en la que viene!',
-    '¡No te preocupes! La correcta era: {CORRECT}. ¡A recuperar terreno!',
+    '¡Buen intento! ¡A la siguiente con toda!',
+    '¡Casi lo logras! ¡Cabeza arriba y a sumar!',
+    '¡No te preocupes! ¡La próxima es tuya!',
+    '¡Ánimo! ¡A recuperar el ritmo!',
+    '¡Patinamos por poco! ¡Concéntrate en la que viene!',
   ]);
 
   private timeoutPool = new AntiRepeatPool([
-    '¡Uff, se nos agotó el tiempo! La opción correcta era: {CORRECT}. ¡A meterle más velocidad!',
-    '¡Tiempo cumplido! La respuesta era: {CORRECT}. ¡En la próxima no lo dudes!',
-    '¡Sonó la campana! La correcta era: {CORRECT}. ¡Reacciona más rápido en la que sigue!',
-    '¡El reloj no perdona! Era: {CORRECT}. ¡Ojo al temporizador!',
+    '¡Tiempo agotado! ¡Apresúrate en la próxima!',
+    '¡Sonó el reloj! ¡No lo dudes en la que sigue!',
+    '¡Tiempo cumplido! ¡Tú puedes reponerte!',
+    '¡El reloj no perdona! ¡Atento al temporizador!',
   ]);
 
   private timerSuspensePool = new AntiRepeatPool([
-    '¡Ojo, cinco segundos!',
+    '¡Últimos cinco segundos!',
     '¡Se acaba el tiempo!',
     '¡Cinco segundos, decide ya!',
-    '¡Rápido, rápido, últimos segundos!',
+    '¡Tiempo límite!',
   ]);
 
   constructor() {
@@ -687,7 +693,16 @@ class SpeechEngine {
     this.timerAlertTriggeredForQuestion = -1;
   }
 
-  // 10. Voz de celebración al subir de nivel o ganar partida
+  // 9.b. Voz de celebración al subir de nivel o alcanzar racha hito
+  public speakLevelUp(streakOrLevel: number | string) {
+    const phrase = this.levelUpPool.getNext();
+    this.speakPhrase(`${phrase} ¡${streakOrLevel} aciertos seguidos!`, {
+      rate: 1.08,
+      pitch: 1.18,
+    });
+  }
+
+  // 10. Voz de celebración al finalizar la partida (breve y concisa)
   public speakFinalSummary(data: {
     badgeTitle: string;
     score: number;
@@ -698,33 +713,24 @@ class SpeechEngine {
     let celebrationHook = '';
     let pitch = 1.08;
 
-    if (data.accuracy >= 90) {
-      celebrationHook = '¡Qué partidazo acabas de jugar! ¡Descomunal, mente brillante absoluta!';
-      pitch = 1.16;
-    } else if (data.accuracy >= 70) {
-      celebrationHook = '¡Gran demostración de talento! ¡Estás a un paso de la corona!';
-      pitch = 1.12;
+    if (data.accuracy >= 80) {
+      celebrationHook = '¡Partida brillante! ¡Qué gran velocidad mental!';
+      pitch = 1.14;
     } else if (data.accuracy >= 50) {
-      celebrationHook = '¡Buenísimo esfuerzo! Tus reflejos están cada vez más afilados.';
-      pitch = 1.06;
+      celebrationHook = '¡Partida completada! ¡Muy buenos reflejos!';
+      pitch = 1.08;
     } else {
-      celebrationHook = '¡Bien jugado! La práctica hace al maestro y cada intento te hace más veloz.';
+      celebrationHook = '¡Partida finalizada! ¡Buen entrenamiento!';
       pitch = 1.02;
     }
 
     const segments = [
-      { text: celebrationHook, pauseAfterMs: 250, rate: 1.04, pitch },
+      { text: celebrationHook, pauseAfterMs: 200, rate: 1.04, pitch },
       {
-        text: `Lograste ${data.score} puntos, con ${data.correctCount} aciertos de diez preguntas y un ${data.accuracy} por ciento de precisión.`,
-        pauseAfterMs: 200,
-        rate: 1.0,
-        pitch: 1.04,
-      },
-      {
-        text: `Tu racha máxima fue de ${data.maxStreak} respuestas seguidas. ¡A seguir desafiando tus límites!`,
+        text: `Lograste ${data.score} puntos con racha de ${data.maxStreak}. ¡Bien jugado!`,
         pauseAfterMs: 100,
         rate: 1.02,
-        pitch: 1.08,
+        pitch: 1.05,
       },
     ];
 

@@ -14,10 +14,11 @@ import {
   VolumeX,
   Mic,
   MicOff,
+  Music,
   Sparkles,
 } from 'lucide-react';
 import { DifficultyLevel } from '../types';
-import { soundFx } from '../utils/audio';
+import { soundFx, ambientMusic } from '../utils/audio';
 import { speechEngine } from '../utils/speech';
 import { triggerConfetti } from '../utils/confetti';
 import { downloadStandaloneHtml } from '../utils/exportHtml';
@@ -48,15 +49,18 @@ export const FinalScreen: React.FC<FinalScreenProps> = ({
   onGoHome,
 }) => {
   const [soundOn, setSoundOn] = useState(soundFx.isEnabled());
+  const [musicOn, setMusicOn] = useState(ambientMusic.isEnabled());
   const [voiceOn, setVoiceOn] = useState(speechEngine.isEnabled());
   const [isSpeaking, setIsSpeaking] = useState(speechEngine.isSpeaking());
 
   useEffect(() => {
     const unsubS = soundFx.subscribe((en) => setSoundOn(en));
+    const unsubM = ambientMusic.subscribe((en) => setMusicOn(en));
     const unsubV = speechEngine.subscribe((en) => setVoiceOn(en));
     const unsubSpk = speechEngine.subscribeSpeaking((sp) => setIsSpeaking(sp));
     return () => {
       unsubS();
+      unsubM();
       unsubV();
       unsubSpk();
     };
@@ -156,30 +160,64 @@ export const FinalScreen: React.FC<FinalScreenProps> = ({
           {badgeSubtitle}
         </p>
 
-        {/* Listen Result Button & Quick Toggles */}
+        {/* Listen Result Button & Quick 3 Audio Toggles */}
         <div className="flex flex-wrap items-center justify-center gap-2 mb-5">
           <button
             id="btn-listen-final-summary"
             type="button"
             onClick={handleSpeakSummary}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-cyan-950/70 border border-cyan-500/60 text-cyan-200 font-bold text-xs hover:bg-cyan-900/80 transition-all shadow-md active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-cyan-950/70 border border-cyan-500/60 text-cyan-200 font-bold text-xs hover:bg-cyan-900/80 transition-all shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
           >
             <Volume2 className="w-4 h-4 text-cyan-400" />
-            <span>🔊 Escuchar resultado en voz alta</span>
+            <span>🔊 Escuchar resultado</span>
           </button>
 
+          {/* Sound Toggle */}
+          <button
+            id="final-sound-toggle-btn"
+            type="button"
+            onClick={() => soundFx.toggleSound()}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all hover:-translate-y-0.5 ${
+              soundOn
+                ? 'bg-amber-950/50 border-amber-500/50 text-amber-300'
+                : 'bg-slate-800 border-slate-700 text-slate-400'
+            }`}
+            title="Efectos de sonido (SFX)"
+          >
+            {soundOn ? <Volume2 className="w-3.5 h-3.5 text-amber-400" /> : <VolumeX className="w-3.5 h-3.5 text-slate-500" />}
+            <span>SFX {soundOn ? 'ON' : 'OFF'}</span>
+          </button>
+
+          {/* Music Toggle */}
+          <button
+            id="final-music-toggle-btn"
+            type="button"
+            onClick={() => ambientMusic.toggleMusic()}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all hover:-translate-y-0.5 ${
+              musicOn
+                ? 'bg-purple-950/50 border-purple-500/50 text-purple-300'
+                : 'bg-slate-800 border-slate-700 text-slate-400'
+            }`}
+            title="Música ambiental"
+          >
+            <Music className={`w-3.5 h-3.5 ${musicOn ? 'text-purple-400' : 'text-slate-500'}`} />
+            <span>Música {musicOn ? 'ON' : 'OFF'}</span>
+          </button>
+
+          {/* Voice Toggle */}
           <button
             id="final-voice-toggle-btn"
             type="button"
             onClick={() => speechEngine.toggleVoice()}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all hover:-translate-y-0.5 ${
               voiceOn
                 ? 'bg-cyan-950/50 border-cyan-600/50 text-cyan-300'
                 : 'bg-slate-800 border-slate-700 text-slate-400'
             }`}
+            title="Voz de presentador"
           >
             {voiceOn ? <Mic className="w-3.5 h-3.5 text-cyan-400" /> : <MicOff className="w-3.5 h-3.5 text-slate-500" />}
-            <span>Voz: {voiceOn ? 'ACTIVADA' : 'DESACTIVADA'}</span>
+            <span>Voz {voiceOn ? 'ON' : 'OFF'}</span>
           </button>
         </div>
 

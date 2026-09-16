@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Play, BookOpen, Layers, Trophy, Sparkles, Download, Zap, Volume2, VolumeX, Mic, MicOff, Sliders } from 'lucide-react';
+import { Play, BookOpen, Layers, Trophy, Sparkles, Download, Zap, Volume2, VolumeX, Mic, MicOff, Music, Sliders } from 'lucide-react';
 import { DifficultyLevel, Category } from '../types';
-import { soundFx } from '../utils/audio';
+import { soundFx, ambientMusic } from '../utils/audio';
 import { speechEngine } from '../utils/speech';
 import { VoiceSettingsModal } from './VoiceSettingsModal';
 
@@ -30,6 +30,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   const currentCategoryObj = categories.find((c) => c.id === selectedCategory);
   const [soundEnabled, setSoundEnabled] = useState(soundFx.isEnabled());
+  const [musicEnabled, setMusicEnabled] = useState(ambientMusic.isEnabled());
   const [voiceEnabled, setVoiceEnabled] = useState(speechEngine.isEnabled());
   const [voiceVolume, setVoiceVolume] = useState(speechEngine.getVolume());
   const [voiceName, setVoiceName] = useState(speechEngine.getSelectedVoiceName());
@@ -37,6 +38,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   useEffect(() => {
     const unsubS = soundFx.subscribe((en) => setSoundEnabled(en));
+    const unsubM = ambientMusic.subscribe((en) => setMusicEnabled(en));
     const unsubV = speechEngine.subscribe((en) => setVoiceEnabled(en));
     const unsubVol = speechEngine.subscribeVolume((vol) => setVoiceVolume(vol));
     const unsubVoiceChange = speechEngine.subscribeVoiceChange(() => {
@@ -44,6 +46,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     });
     return () => {
       unsubS();
+      unsubM();
       unsubV();
       unsubVol();
       unsubVoiceChange();
@@ -78,6 +81,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     soundFx.playGameStart();
     if (speechEngine.isEnabled()) {
       speechEngine.speakGameStart();
+    }
+    if (ambientMusic.isEnabled()) {
+      ambientMusic.start();
     }
     onStartGame();
   };
@@ -116,122 +122,122 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             🔥 Bonos de racha
           </span>
           <span className="flex items-center gap-1 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700">
-            🎙️ Narración Juvenil Dinámica
+            🎙️ Presentador Juvenil
+          </span>
+          <span className="flex items-center gap-1 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700">
+            🎵 Música Concurso
           </span>
         </div>
       </div>
 
-      {/* AUDIO & VOICE CONTROLS PANEL */}
+      {/* AUDIO, VOICE & MUSIC CONTROLS PANEL */}
       <div className="bg-slate-800/70 border border-slate-700/80 rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <span className="text-xs sm:text-sm font-bold tracking-wider text-slate-300 uppercase flex items-center gap-1.5">
             <Volume2 className="w-4 h-4 text-cyan-400" />
-            CONTROL DE AUDIO Y VOZ NATIVA:
+            CONTROLES INDEPENDIENTES DE AUDIO:
           </span>
           <button
             id="open-voice-settings-home-btn"
             type="button"
             onClick={() => setIsVoiceModalOpen(true)}
             className="text-xs text-cyan-300 hover:text-cyan-200 font-bold flex items-center gap-1 bg-cyan-500/15 border border-cyan-400/30 px-2.5 py-1 rounded-full hover:bg-cyan-500/25 transition-all"
-            title="Abrir configuración de voz, volumen y selección de voz en español"
+            title="Abrir ajustes de voz, música y efectos"
           >
             <Sliders className="w-3.5 h-3.5" />
-            Configurar Voz
+            Ajustes
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {/* Sound Effects toggle */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {/* 1. Sound Effects toggle */}
           <button
             id="home-sound-toggle-btn"
             type="button"
             onClick={() => soundFx.toggleSound()}
-            className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+            className={`flex flex-col justify-between p-3 rounded-xl border transition-all text-left ${
               soundEnabled
                 ? 'bg-amber-500/15 border-amber-500/40 text-amber-200'
                 : 'bg-slate-900/60 border-slate-700 text-slate-400'
             }`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between w-full mb-1">
               {soundEnabled ? (
-                <Volume2 className="w-5 h-5 text-amber-400 shrink-0" />
+                <Volume2 className="w-4 h-4 text-amber-400" />
               ) : (
-                <VolumeX className="w-5 h-5 text-slate-500 shrink-0" />
+                <VolumeX className="w-4 h-4 text-slate-500" />
               )}
-              <div className="text-left">
-                <span className="text-xs sm:text-sm font-bold block">Efectos de sonido</span>
-                <span className="text-[10px] text-slate-400 block">Web Audio API</span>
-              </div>
+              <span
+                className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                  soundEnabled ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-400'
+                }`}
+              >
+                {soundEnabled ? 'ON' : 'OFF'}
+              </span>
             </div>
-            <span
-              className={`text-xs font-black px-2 py-0.5 rounded-md ${
-                soundEnabled
-                  ? 'bg-amber-400 text-slate-950'
-                  : 'bg-slate-800 text-slate-400'
-              }`}
-            >
-              {soundEnabled ? 'ACTIVADOS' : 'DESACTIVADOS'}
-            </span>
+            <span className="text-xs font-bold block">Efectos (SFX)</span>
+            <span className="text-[10px] text-slate-400">Aciertos y tiempo</span>
           </button>
 
-          {/* Voice SpeechSynthesis toggle */}
+          {/* 2. Ambient Music toggle */}
+          <button
+            id="home-music-toggle-btn"
+            type="button"
+            onClick={() => ambientMusic.toggleMusic()}
+            className={`flex flex-col justify-between p-3 rounded-xl border transition-all text-left ${
+              musicEnabled
+                ? 'bg-purple-500/15 border-purple-500/40 text-purple-200'
+                : 'bg-slate-900/60 border-slate-700 text-slate-400'
+            }`}
+          >
+            <div className="flex items-center justify-between w-full mb-1">
+              <Music className={`w-4 h-4 ${musicEnabled ? 'text-purple-400' : 'text-slate-500'}`} />
+              <span
+                className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                  musicEnabled ? 'bg-purple-400 text-slate-950' : 'bg-slate-800 text-slate-400'
+                }`}
+              >
+                {musicEnabled ? 'ON' : 'OFF'}
+              </span>
+            </div>
+            <span className="text-xs font-bold block">Música Concurso</span>
+            <span className="text-[10px] text-slate-400">Pad y pulso a 106 BPM</span>
+          </button>
+
+          {/* 3. Voice SpeechSynthesis toggle */}
           <button
             id="home-voice-toggle-btn"
             type="button"
             onClick={() => speechEngine.toggleVoice()}
-            className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+            className={`flex flex-col justify-between p-3 rounded-xl border transition-all text-left ${
               voiceEnabled
                 ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-200'
                 : 'bg-slate-900/60 border-slate-700 text-slate-400'
             }`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between w-full mb-1">
               {voiceEnabled ? (
-                <Mic className="w-5 h-5 text-cyan-400 shrink-0" />
+                <Mic className="w-4 h-4 text-cyan-400" />
               ) : (
-                <MicOff className="w-5 h-5 text-slate-500 shrink-0" />
+                <MicOff className="w-4 h-4 text-slate-500" />
               )}
-              <div className="text-left">
-                <span className="text-xs sm:text-sm font-bold block">Voz de presentador</span>
-                <span className="text-[10px] text-slate-400 block">
-                  {voiceEnabled ? `${voiceName.slice(0, 18)}...` : 'Silenciada'}
-                </span>
-              </div>
+              <span
+                className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                  voiceEnabled ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 text-slate-400'
+                }`}
+              >
+                {voiceEnabled ? 'ON' : 'OFF'}
+              </span>
             </div>
-            <span
-              className={`text-xs font-black px-2 py-0.5 rounded-md ${
-                voiceEnabled
-                  ? 'bg-cyan-400 text-slate-950'
-                  : 'bg-slate-800 text-slate-400'
-              }`}
-            >
-              {voiceEnabled ? 'ACTIVADA' : 'DESACTIVADA'}
+            <span className="text-xs font-bold block">Voz Presentador</span>
+            <span className="text-[10px] text-slate-400">
+              {voiceEnabled ? 'Momentos clave' : 'Silenciada'}
             </span>
           </button>
         </div>
 
-        {/* Volume Slider Section */}
-        {voiceEnabled && (
-          <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-700/60 flex items-center gap-3">
-            <span className="text-xs font-bold text-slate-300 flex items-center gap-1 shrink-0">
-              <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
-              Volumen: {Math.round(voiceVolume * 100)}%
-            </span>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={voiceVolume}
-              onChange={(e) => speechEngine.setVolume(parseFloat(e.target.value))}
-              className="w-full accent-cyan-400 h-1.5 bg-slate-700 rounded-lg cursor-pointer"
-              title="Ajustar volumen de voz"
-            />
-          </div>
-        )}
-
         <p className="text-[11px] text-slate-400 text-center">
-          Voz de estilo presentador con entonación dinámica, pausas naturales y sin leer emojis ni códigos.
+          La voz solo interviene en momentos clave (inicio, aciertos, fallos, 5s finales, subida de nivel y final).
         </p>
       </div>
 

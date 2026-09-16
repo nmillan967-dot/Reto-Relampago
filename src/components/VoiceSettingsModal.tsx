@@ -4,6 +4,7 @@ import {
   MicOff,
   Volume2,
   VolumeX,
+  Music,
   X,
   Play,
   Square,
@@ -13,6 +14,7 @@ import {
   Sliders,
 } from 'lucide-react';
 import { speechEngine, VoiceOptionInfo } from '../utils/speech';
+import { soundFx, ambientMusic } from '../utils/audio';
 
 interface VoiceSettingsModalProps {
   isOpen: boolean;
@@ -20,12 +22,17 @@ interface VoiceSettingsModalProps {
 }
 
 export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ isOpen, onClose }) => {
+  const [activeTab, setActiveTab] = useState<'voice' | 'music' | 'sfx'>('voice');
   const [voiceEnabled, setVoiceEnabled] = useState(speechEngine.isEnabled());
   const [volume, setVolume] = useState(speechEngine.getVolume());
   const [speechRate, setSpeechRate] = useState(speechEngine.getSpeechRate());
   const [availableVoices, setAvailableVoices] = useState<VoiceOptionInfo[]>([]);
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string | null>(speechEngine.getSelectedVoiceURI());
   const [isSpeaking, setIsSpeaking] = useState(speechEngine.isSpeaking());
+
+  const [soundEnabled, setSoundEnabled] = useState(soundFx.isEnabled());
+  const [musicEnabled, setMusicEnabled] = useState(ambientMusic.isEnabled());
+  const [musicVolume, setMusicVolume] = useState(ambientMusic.getVolume());
 
   useEffect(() => {
     const unsubVoice = speechEngine.subscribe((en) => setVoiceEnabled(en));
@@ -36,6 +43,10 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ isOpen, 
       setSelectedVoiceURI(speechEngine.getSelectedVoiceURI());
     });
 
+    const unsubSound = soundFx.subscribe((en) => setSoundEnabled(en));
+    const unsubMusic = ambientMusic.subscribe((en) => setMusicEnabled(en));
+    const unsubMusicVol = ambientMusic.subscribeVolume((vol) => setMusicVolume(vol));
+
     setAvailableVoices(speechEngine.getAvailableVoices());
     setSelectedVoiceURI(speechEngine.getSelectedVoiceURI());
 
@@ -44,6 +55,9 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ isOpen, 
       unsubVol();
       unsubSpeaking();
       unsubChange();
+      unsubSound();
+      unsubMusic();
+      unsubMusicVol();
     };
   }, []);
 
@@ -100,10 +114,10 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ isOpen, 
             </div>
             <div>
               <h2 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
-                Ajustes de Voz del Presentador
+                Ajustes de Audio y Ambientación
               </h2>
               <p className="text-xs text-slate-400">
-                Personaliza la narración juvenil para la mejor experiencia auditiva
+                Controla de forma independiente la voz, la música y los efectos sonoros
               </p>
             </div>
           </div>
@@ -117,228 +131,415 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ isOpen, 
           </button>
         </div>
 
-        {/* 1. Toggle Activación Principal */}
-        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60">
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                voiceEnabled
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'bg-slate-800 text-slate-500 border border-slate-700'
-              }`}
-            >
-              {voiceEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
-            </div>
-            <div>
-              <span className="text-sm font-bold text-white block">Narración por Voz</span>
-              <span className="text-xs text-slate-400 block">
-                {voiceEnabled
-                  ? 'El presentador narrará preguntas y animará tus aciertos'
-                  : 'Voz silenciada durante toda la partida'}
-              </span>
-            </div>
-          </div>
+        {/* Settings Category Tabs */}
+        <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950/70 border border-slate-800 rounded-2xl">
           <button
-            id="modal-toggle-voice-btn"
-            onClick={handleToggleVoice}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-black transition-all ${
-              voiceEnabled
-                ? 'bg-cyan-400 text-slate-950 shadow-md shadow-cyan-400/20 hover:bg-cyan-300'
-                : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white'
+            type="button"
+            onClick={() => setActiveTab('voice')}
+            className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'voice'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            {voiceEnabled ? 'ACTIVADA' : 'DESACTIVADA'}
+            <Mic className="w-3.5 h-3.5" />
+            <span>Voz ({voiceEnabled ? 'ON' : 'OFF'})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('music')}
+            className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'music'
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-400/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Music className="w-3.5 h-3.5" />
+            <span>Música ({musicEnabled ? 'ON' : 'OFF'})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('sfx')}
+            className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'sfx'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Volume2 className="w-3.5 h-3.5" />
+            <span>Efectos ({soundEnabled ? 'ON' : 'OFF'})</span>
           </button>
         </div>
 
-        {/* 2. Control de Volumen */}
-        <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 flex flex-col gap-2.5">
-          <div className="flex items-center justify-between text-xs font-bold text-slate-300">
-            <span className="flex items-center gap-1.5 text-cyan-300">
-              <Volume2 className="w-4 h-4" />
-              Volumen de la Voz
-            </span>
-            <span className="text-white font-black">{Math.round(volume * 100)}%</span>
-          </div>
+        {/* TAB 1: VOZ DEL PRESENTADOR */}
+        {activeTab === 'voice' && (
+          <div className="flex flex-col gap-3.5">
+            {/* Toggle Activación Principal */}
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    voiceEnabled
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                      : 'bg-slate-800 text-slate-500 border border-slate-700'
+                  }`}
+                >
+                  {voiceEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+                </div>
+                <div>
+                  <span className="text-sm font-bold text-white block">Voz del Presentador</span>
+                  <span className="text-xs text-slate-400 block">
+                    {voiceEnabled
+                      ? 'Intervenciones oportunas en momentos clave del concurso'
+                      : 'Voz silenciada completamente'}
+                  </span>
+                </div>
+              </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => handleVolumeChange(0)}
-              className="text-slate-400 hover:text-white transition-colors"
-              title="Silenciar voz"
-            >
-              <VolumeX className="w-4 h-4" />
-            </button>
-            <input
-              id="voice-volume-slider"
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={volume}
-              onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-              disabled={!voiceEnabled}
-              className="w-full accent-cyan-400 h-2 bg-slate-700 rounded-lg cursor-pointer disabled:opacity-40"
-            />
-            <button
-              onClick={() => handleVolumeChange(1.0)}
-              className="text-slate-400 hover:text-white transition-colors"
-              title="Volumen al máximo"
-            >
-              <Volume2 className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Presets rápidos de volumen */}
-          <div className="flex items-center justify-between gap-1.5 pt-1">
-            {[0.25, 0.5, 0.75, 1.0].map((preset) => (
               <button
-                key={preset}
-                onClick={() => handleVolumeChange(preset)}
-                disabled={!voiceEnabled}
-                className={`flex-1 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-                  Math.abs(volume - preset) < 0.05
-                    ? 'bg-cyan-500/25 border border-cyan-400/50 text-cyan-200'
-                    : 'bg-slate-800/80 border border-slate-700 text-slate-400 hover:text-slate-200'
-                } disabled:opacity-40`}
+                id="modal-toggle-voice-btn"
+                type="button"
+                onClick={handleToggleVoice}
+                className={`px-3 py-1.5 rounded-full text-xs font-black transition-all ${
+                  voiceEnabled
+                    ? 'bg-cyan-400 text-slate-950 shadow-md shadow-cyan-500/20'
+                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                }`}
               >
-                {Math.round(preset * 100)}%
+                {voiceEnabled ? 'ACTIVADA' : 'DESACTIVADA'}
               </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 3. Ritmo de la Narración */}
-        <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 flex flex-col gap-2.5">
-          <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            Ritmo de Presentador
-          </span>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { rate: 0.92, label: 'Tranquilo', sub: 'Pausado' },
-              { rate: 1.0, label: 'Natural', sub: 'Recomendado' },
-              { rate: 1.08, label: 'Dinámico', sub: 'Enérgico' },
-            ].map((item) => (
-              <button
-                key={item.rate}
-                onClick={() => handleRateChange(item.rate)}
-                disabled={!voiceEnabled}
-                className={`py-2 px-2.5 rounded-xl border text-center transition-all ${
-                  Math.abs(speechRate - item.rate) < 0.04
-                    ? 'bg-amber-400/20 border-amber-400/60 text-amber-200 shadow-sm shadow-amber-400/10'
-                    : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-700'
-                } disabled:opacity-40`}
-              >
-                <span className="text-xs font-bold block">{item.label}</span>
-                <span className="text-[10px] text-slate-400 block">{item.sub}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 4. Selector Inteligente de Voz en Español */}
-        <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 flex flex-col gap-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-cyan-400" />
-              Voces en Español Detectadas en tu Dispositivo:
-            </span>
-            <button
-              onClick={handleResetBestVoice}
-              className="text-[11px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold"
-              title="Restaurar mejor voz recomendada"
-            >
-              <RefreshCw className="w-3 h-3" />
-              Auto-seleccionar mejor voz
-            </button>
-          </div>
-
-          {availableVoices.length === 0 ? (
-            <div className="p-3 bg-slate-900/60 rounded-xl text-center text-xs text-slate-400">
-              Cargando voces del navegador... Si tarda, el navegador usará la voz nativa en español del sistema operativo.
             </div>
-          ) : (
-            <div className="flex flex-col gap-1.5 max-h-44 overflow-y-auto pr-1">
-              {availableVoices.map((v, idx) => {
-                const isSelected = selectedVoiceURI === v.voiceURI;
-                const isTopRanked = idx === 0;
 
-                return (
+            {/* Volumen de Voz */}
+            <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <Volume2 className="w-4 h-4 text-cyan-400" />
+                  Volumen de la Voz
+                </span>
+                <span className="text-xs font-black text-cyan-300">
+                  {Math.round(volume * 100)}%
+                </span>
+              </div>
+              <input
+                id="voice-volume-range"
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={volume}
+                onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                disabled={!voiceEnabled}
+                className="w-full accent-cyan-400 cursor-pointer disabled:opacity-40"
+              />
+            </div>
+
+            {/* Ritmo de la Narración */}
+            <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60 flex flex-col gap-2">
+              <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                Ritmo del Presentador
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { rate: 0.92, label: 'Tranquilo', sub: 'Pausado' },
+                  { rate: 1.0, label: 'Natural', sub: 'Recomendado' },
+                  { rate: 1.08, label: 'Dinámico', sub: 'Enérgico' },
+                ].map((item) => (
                   <button
-                    key={v.voiceURI || idx}
-                    type="button"
-                    onClick={() => handleSelectVoice(v.voiceURI)}
+                    key={item.rate}
+                    onClick={() => handleRateChange(item.rate)}
                     disabled={!voiceEnabled}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-left transition-all ${
-                      isSelected
-                        ? 'bg-cyan-500/20 border-cyan-400/60 text-white shadow-sm shadow-cyan-500/15'
-                        : 'bg-slate-900/60 border-slate-700/70 text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                    className={`py-2 px-2 rounded-xl border text-center transition-all ${
+                      Math.abs(speechRate - item.rate) < 0.04
+                        ? 'bg-amber-400/20 border-amber-400/60 text-amber-200'
+                        : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-700'
                     } disabled:opacity-40`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold ${
-                          isSelected ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 text-slate-400'
-                        }`}
-                      >
-                        {isSelected ? <Check className="w-3 h-3 stroke-[3]" /> : idx + 1}
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-xs font-bold truncate block">{v.label}</span>
-                        <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                          <span>{v.lang}</span>
-                          {isTopRanked && (
-                            <span className="text-amber-300 bg-amber-400/20 px-1.5 py-0.2 rounded font-bold">
-                              ★ Recomendada
-                            </span>
-                          )}
-                          {v.isNatural && (
-                            <span className="text-emerald-300 bg-emerald-400/20 px-1.5 py-0.2 rounded font-medium">
-                              Natural / Neural
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    <span className="text-xs font-bold block">{item.label}</span>
+                    <span className="text-[10px] text-slate-400 block">{item.sub}</span>
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* 5. Botón de Prueba y Cierre */}
-        <div className="flex items-center justify-between gap-3 pt-1">
-          <button
-            id="test-voice-btn"
-            type="button"
-            onClick={handleTestVoice}
-            disabled={!voiceEnabled}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all ${
-              isSpeaking
-                ? 'bg-rose-600/30 border border-rose-500 text-rose-200 hover:bg-rose-600/40'
-                : 'bg-cyan-500/20 border border-cyan-400/50 text-cyan-200 hover:bg-cyan-500/30'
-            } disabled:opacity-40`}
-          >
-            {isSpeaking ? (
-              <>
-                <Square className="w-4 h-4 fill-rose-300" />
-                Detener Prueba
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4 fill-cyan-300" />
-                Probar Voz de Presentador
-              </>
-            )}
-          </button>
+            {/* Selector de Voces en Español */}
+            <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-cyan-400" />
+                  Voz Seleccionada en Español:
+                </span>
+                <button
+                  onClick={handleResetBestVoice}
+                  className="text-[10px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Auto-seleccionar
+                </button>
+              </div>
 
+              {availableVoices.length === 0 ? (
+                <div className="p-2.5 bg-slate-900/60 rounded-xl text-center text-xs text-slate-400">
+                  Cargando voces del sistema...
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-1">
+                  {availableVoices.map((v, idx) => {
+                    const isSelected = selectedVoiceURI === v.voiceURI;
+                    return (
+                      <button
+                        key={v.voiceURI || idx}
+                        type="button"
+                        onClick={() => handleSelectVoice(v.voiceURI)}
+                        disabled={!voiceEnabled}
+                        className={`w-full flex items-center justify-between p-2 rounded-xl border text-left text-xs transition-all ${
+                          isSelected
+                            ? 'bg-cyan-500/20 border-cyan-400/60 text-white'
+                            : 'bg-slate-900/60 border-slate-700/70 text-slate-300 hover:bg-slate-800/80'
+                        } disabled:opacity-40`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold ${
+                              isSelected ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 text-slate-400'
+                            }`}
+                          >
+                            {isSelected ? <Check className="w-2.5 h-2.5 stroke-[3]" /> : idx + 1}
+                          </div>
+                          <span className="truncate font-semibold">{v.label}</span>
+                        </div>
+                        {idx === 0 && (
+                          <span className="text-amber-300 bg-amber-400/20 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0">
+                            ★ Recomendada
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Botón de Prueba */}
+            <button
+              id="test-voice-btn"
+              type="button"
+              onClick={handleTestVoice}
+              disabled={!voiceEnabled}
+              className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all ${
+                isSpeaking
+                  ? 'bg-rose-600/30 border border-rose-500 text-rose-200'
+                  : 'bg-cyan-500/20 border border-cyan-400/50 text-cyan-200 hover:bg-cyan-500/30'
+              } disabled:opacity-40`}
+            >
+              {isSpeaking ? (
+                <>
+                  <Square className="w-4 h-4 fill-rose-300" />
+                  Detener Prueba de Voz
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 fill-cyan-300" />
+                  Escuchar Frase de Prueba
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* TAB 2: MÚSICA AMBIENTAL DE CONCURSO */}
+        {activeTab === 'music' && (
+          <div className="flex flex-col gap-3.5">
+            {/* Toggle Música */}
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    musicEnabled
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                      : 'bg-slate-800 text-slate-500 border border-slate-700'
+                  }`}
+                >
+                  <Music className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-sm font-bold text-white block">Música de Fondo</span>
+                  <span className="text-xs text-slate-400 block">
+                    {musicEnabled
+                      ? 'Atmósfera moderna de concurso de televisión'
+                      : 'Música ambiental desactivada'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                id="modal-toggle-music-btn"
+                type="button"
+                onClick={() => ambientMusic.toggleMusic()}
+                className={`px-3 py-1.5 rounded-full text-xs font-black transition-all ${
+                  musicEnabled
+                    ? 'bg-purple-400 text-slate-950 shadow-md shadow-purple-500/20'
+                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                }`}
+              >
+                {musicEnabled ? 'ACTIVADA' : 'DESACTIVADA'}
+              </button>
+            </div>
+
+            {/* Slider de Volumen Música */}
+            <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <Volume2 className="w-4 h-4 text-purple-400" />
+                  Volumen de Música de Fondo
+                </span>
+                <span className="text-xs font-black text-purple-300">
+                  {Math.round(musicVolume * 100)}%
+                </span>
+              </div>
+              <input
+                id="music-volume-range"
+                type="range"
+                min="0"
+                max="0.5"
+                step="0.02"
+                value={musicVolume}
+                onChange={(e) => ambientMusic.setVolume(parseFloat(e.target.value))}
+                disabled={!musicEnabled}
+                className="w-full accent-purple-400 cursor-pointer disabled:opacity-40"
+              />
+              <span className="text-[11px] text-slate-400">
+                Sintetizada en tiempo real con Web Audio API: acordes cálidos y pulso a 106 BPM sin saturar la pantalla.
+              </span>
+            </div>
+
+            {/* Botón de Escuchar / Detener Música */}
+            <button
+              type="button"
+              onClick={() => {
+                if (ambientMusic.isCurrentlyPlaying()) {
+                  ambientMusic.stop();
+                } else {
+                  ambientMusic.start();
+                }
+              }}
+              disabled={!musicEnabled}
+              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold bg-purple-500/20 border border-purple-400/50 text-purple-200 hover:bg-purple-500/30 transition-all disabled:opacity-40"
+            >
+              {ambientMusic.isCurrentlyPlaying() ? (
+                <>
+                  <Square className="w-4 h-4 fill-purple-300" />
+                  Pausar Música de Fondo
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 fill-purple-300" />
+                  Probar Música Ambiental
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* TAB 3: EFECTOS DE SONIDO (SFX) */}
+        {activeTab === 'sfx' && (
+          <div className="flex flex-col gap-3.5">
+            {/* Toggle Sonido */}
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    soundEnabled
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                      : 'bg-slate-800 text-slate-500 border border-slate-700'
+                  }`}
+                >
+                  {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                </div>
+                <div>
+                  <span className="text-sm font-bold text-white block">Efectos de Sonido</span>
+                  <span className="text-xs text-slate-400 block">
+                    {soundEnabled
+                      ? 'Sonidos breves para aciertos, rachas y selecciones'
+                      : 'Efectos sonoros desactivados'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                id="modal-toggle-sound-btn"
+                type="button"
+                onClick={() => soundFx.toggleSound()}
+                className={`px-3 py-1.5 rounded-full text-xs font-black transition-all ${
+                  soundEnabled
+                    ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20'
+                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                }`}
+              >
+                {soundEnabled ? 'ACTIVADOS' : 'DESACTIVADOS'}
+              </button>
+            </div>
+
+            {/* Test Buttons for Sound Effects */}
+            <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60 flex flex-col gap-2">
+              <span className="text-xs font-bold text-slate-300">
+                Probar Efectos Sintetizados:
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => soundFx.playCorrect()}
+                  disabled={!soundEnabled}
+                  className="py-2 px-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold hover:bg-emerald-500/30 disabled:opacity-40 text-left flex items-center justify-between"
+                >
+                  <span>Respuesta Correcta</span>
+                  <Play className="w-3.5 h-3.5 fill-emerald-300" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => soundFx.playLevelUp()}
+                  disabled={!soundEnabled}
+                  className="py-2 px-3 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold hover:bg-amber-500/30 disabled:opacity-40 text-left flex items-center justify-between"
+                >
+                  <span>Subir de Nivel / Racha</span>
+                  <Play className="w-3.5 h-3.5 fill-amber-300" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => soundFx.playWrong()}
+                  disabled={!soundEnabled}
+                  className="py-2 px-3 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold hover:bg-rose-500/30 disabled:opacity-40 text-left flex items-center justify-between"
+                >
+                  <span>Respuesta Incorrecta</span>
+                  <Play className="w-3.5 h-3.5 fill-rose-300" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => soundFx.playTick()}
+                  disabled={!soundEnabled}
+                  className="py-2 px-3 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-bold hover:bg-cyan-500/30 disabled:opacity-40 text-left flex items-center justify-between"
+                >
+                  <span>Tic Tac Reloj (5s)</span>
+                  <Play className="w-3.5 h-3.5 fill-cyan-300" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center justify-end pt-2 border-t border-slate-800">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-white transition-colors"
+            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs hover:brightness-110 transition-all shadow-md shadow-amber-500/20"
           >
-            Listo
+            Guardar y Cerrar
           </button>
         </div>
       </div>

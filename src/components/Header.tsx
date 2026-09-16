@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Volume2, VolumeX, Mic, MicOff, Zap, Download, Sliders } from 'lucide-react';
-import { soundFx } from '../utils/audio';
+import { Volume2, VolumeX, Mic, MicOff, Music, Zap, Download, Sliders } from 'lucide-react';
+import { soundFx, ambientMusic } from '../utils/audio';
 import { speechEngine } from '../utils/speech';
 import { downloadStandaloneHtml } from '../utils/exportHtml';
 import { VoiceSettingsModal } from './VoiceSettingsModal';
@@ -12,16 +12,19 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onGoHome, showHomeBtn }) => {
   const [soundOn, setSoundOn] = useState<boolean>(soundFx.isEnabled());
+  const [musicOn, setMusicOn] = useState<boolean>(ambientMusic.isEnabled());
   const [voiceOn, setVoiceOn] = useState<boolean>(speechEngine.isEnabled());
   const [volume, setVolume] = useState<number>(speechEngine.getVolume());
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const unsubSound = soundFx.subscribe((enabled) => setSoundOn(enabled));
+    const unsubMusic = ambientMusic.subscribe((enabled) => setMusicOn(enabled));
     const unsubVoice = speechEngine.subscribe((enabled) => setVoiceOn(enabled));
     const unsubVol = speechEngine.subscribeVolume((vol) => setVolume(vol));
     return () => {
       unsubSound();
+      unsubMusic();
       unsubVoice();
       unsubVol();
     };
@@ -29,6 +32,10 @@ export const Header: React.FC<HeaderProps> = ({ onGoHome, showHomeBtn }) => {
 
   const handleToggleSound = () => {
     soundFx.toggleSound();
+  };
+
+  const handleToggleMusic = () => {
+    ambientMusic.toggleMusic();
   };
 
   const handleToggleVoice = () => {
@@ -76,7 +83,24 @@ export const Header: React.FC<HeaderProps> = ({ onGoHome, showHomeBtn }) => {
             aria-label={soundOn ? 'Silenciar sonidos' : 'Activar sonidos'}
           >
             {soundOn ? <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" /> : <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400" />}
-            <span className="hidden xs:inline">{soundOn ? 'Sonido ON' : 'Sonido OFF'}</span>
+            <span className="hidden xs:inline">{soundOn ? 'SFX ON' : 'SFX OFF'}</span>
+          </button>
+
+          {/* Toggle Ambient Music */}
+          <button
+            id="music-toggle-btn"
+            type="button"
+            onClick={handleToggleMusic}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+              musicOn
+                ? 'bg-purple-950/50 border-purple-700/60 text-purple-200 hover:bg-purple-900/60 shadow-sm'
+                : 'bg-slate-900/70 border-slate-800 text-slate-500 hover:text-slate-300'
+            }`}
+            title={musicOn ? 'Desactivar música ambiental de concurso' : 'Activar música ambiental de concurso'}
+            aria-label={musicOn ? 'Desactivar música ambiental' : 'Activar música ambiental'}
+          >
+            <Music className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${musicOn ? 'text-purple-400 animate-pulse' : 'text-slate-500'}`} />
+            <span className="hidden xs:inline">{musicOn ? 'Música ON' : 'Música OFF'}</span>
           </button>
 
           {/* Toggle Voice - Requirement: "Debe existir un control visible: 🔊 Voz: ACTIVADA / DESACTIVADA" */}
