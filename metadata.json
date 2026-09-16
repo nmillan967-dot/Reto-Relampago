@@ -1,0 +1,6 @@
+{
+  "name": "Reto Relámpago",
+  "description": "Juego web educativo y recreativo contrarreloj para poner a prueba tu velocidad mental con múltiples categorías, rachas y niveles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
